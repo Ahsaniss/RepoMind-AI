@@ -92,9 +92,6 @@ export default function RepositoriesPage() {
     setGhRepos([]);
   };
 
-  // Merge: show GitHub repos first (if connected), then demo repos
-  const allRepos = connected && ghRepos.length > 0 ? ghRepos : demoRepositories;
-
   return (
     <div className="page-container">
       {/* Header */}

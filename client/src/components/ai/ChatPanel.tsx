@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { postAIChat, type AIMessage } from '../../services/ai';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -25,11 +25,11 @@ function parseInlineRefs(
   text: string,
   refs: { file: string; line: number }[],
   onNavigate?: (file: string, line: number) => void
-): (string | JSX.Element)[] {
+): (string | React.ReactNode)[] {
   if (!refs || refs.length === 0) return [text];
 
   // Build regex from known refs
-  const parts: (string | JSX.Element)[] = [];
+  const parts: (string | React.ReactNode)[] = [];
   let remaining = text;
 
   for (const ref of refs) {
@@ -58,7 +58,7 @@ function renderMarkdown(
   text: string,
   refs: { file: string; line: number }[] | undefined,
   onNavigate?: (file: string, line: number) => void
-): JSX.Element {
+): React.ReactNode {
   // Split by fenced code blocks
   const segments = text.split(/(```[\s\S]*?```)/g);
 
