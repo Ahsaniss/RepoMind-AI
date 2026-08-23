@@ -1,0 +1,23 @@
+{
+  "name": "repomind-server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@google/genai": "^2.18.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.2",
+    "@types/node": "^24.13.3",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "~5.8.3"
+  }
+}
