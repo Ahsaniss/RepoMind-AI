@@ -29,7 +29,7 @@ export default function AnalysisPage() {
         if (!session) throw new Error('Not authenticated');
 
         // Check if an analysis already exists
-        const { data: existing, error: fetchErr } = await supabase
+        const { data: existing } = await supabase
           .from('repository_analyses')
           .select('*')
           .eq('repository_id', id)
@@ -128,7 +128,7 @@ export default function AnalysisPage() {
       </div>
       <h2 className="section-title" style={{marginTop:'2rem'}}>Issues</h2>
       <div className="issues-list">
-        {issues.map(issue => (
+        {issues.map((issue: any) => (
           <div key={issue.id} className="issue-row">
             <span className={`issue-severity issue-severity--${issue.severity}`}>{issue.severity.toUpperCase()}</span>
             <div className="issue-info">
