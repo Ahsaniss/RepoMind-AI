@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { demoRepositories } from '../data/demoRepository';
 import ChatPanel from '../components/ai/ChatPanel';
 
@@ -184,6 +184,36 @@ function fileIcon(lang?: string) {
   return lang ? (map[lang] || '📄') : '📄';
 }
 
+type RepositoryLike = {
+  id: string;
+  name: string;
+  fullName?: string;
+  full_name?: string;
+  description?: string;
+  language?: string;
+  stars?: number;
+  forks?: number;
+  openIssues?: number;
+  lastUpdated?: string;
+  updatedAt?: string;
+  owner?: string;
+  avatarUrl?: string;
+  url?: string;
+  defaultBranch?: string;
+  visibility?: string;
+  topics?: string[];
+};
+
+function normalizeRepository(repo: RepositoryLike): RepositoryLike {
+  return {
+    ...repo,
+    fullName: repo.fullName ?? repo.full_name ?? repo.name,
+    language: repo.language ?? 'Unknown',
+    visibility: repo.visibility ?? 'public',
+    lastUpdated: repo.lastUpdated ?? repo.updatedAt ?? new Date().toISOString(),
+  };
+}
+
 // ─── CodeViewer component ─────────────────────────────────────────────────────
 function CodeViewer({
   file,
@@ -261,8 +291,39 @@ function CodeViewer({
 // ─── Main Repository Workspace ────────────────────────────────────────────────
 export default function RepositoryPage() {
   const { id = 'demo-1' } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const repo = demoRepositories.find(r => r.id === id) ?? demoRepositories[0];
+  const locationRepo = (location.state as { repository?: RepositoryLike } | null)?.repository;
+
+  let storedRepo: RepositoryLike | null = null;
+  try {
+    const rawRepo = window.localStorage.getItem('repomind:selectedRepository');
+    if (rawRepo) {
+      storedRepo = JSON.parse(rawRepo) as RepositoryLike;
+    }
+  } catch {
+    storedRepo = null;
+  }
+
+  const demoRepo = demoRepositories.find(r => r.id === id);
+  const resolvedRepo = [locationRepo, storedRepo].find(repo => repo?.id === id);
+  const repo = normalizeRepository(resolvedRepo ?? demoRepo ?? {
+    id,
+    name: id,
+    fullName: id,
+    description: 'Repository details will appear here after you select a connected repository.',
+    language: 'Unknown',
+    stars: 0,
+    forks: 0,
+    openIssues: 0,
+    lastUpdated: new Date().toISOString(),
+    owner: '',
+    avatarUrl: '',
+    url: '',
+    defaultBranch: 'main',
+    visibility: 'public',
+    topics: [],
+  });
 
   const [selectedFile, setSelectedFile] = useState<TreeNode | null>(null);
   const [scrollToLine, setScrollToLine] = useState<number | undefined>();

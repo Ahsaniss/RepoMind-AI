@@ -182,7 +182,22 @@ export default function RepositoriesPage() {
               <div
                 key={r.id}
                 className="repo-card"
-                onClick={() => navigate(`/repositories/${r.id}`)}
+                onClick={() => {
+                  const selectedRepo = {
+                    ...r,
+                    fullName: r.fullName ?? r.full_name ?? r.name,
+                    lastUpdated: r.lastUpdated ?? r.updatedAt ?? new Date().toISOString(),
+                    language: r.language ?? 'Unknown',
+                    visibility: r.visibility ?? 'public',
+                  };
+
+                  window.localStorage.setItem(
+                    'repomind:selectedRepository',
+                    JSON.stringify(selectedRepo)
+                  );
+
+                  navigate(`/repositories/${r.id}`, { state: { repository: selectedRepo } });
+                }}
               >
                 <div className="repo-card-header">
                   <div>
