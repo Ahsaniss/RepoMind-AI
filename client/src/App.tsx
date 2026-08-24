@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/Landing';
@@ -13,8 +14,31 @@ import DocumentationPage from './pages/Documentation';
 import ArchitecturePage from './pages/Architecture';
 import ActivityPage from './pages/Activity';
 import SettingsPage from './pages/Settings';
-
+import { supabase } from './supabase';
 export default function App() {
+  useEffect(() => {
+    const handleSession = async (session: any) => {
+      // If we see a provider_token, capture it securely then discard it
+      if (session?.provider_token) {
+        try {
+          await supabase.functions.invoke('store-github-token', {
+            body: { providerToken: session.provider_token, providerRefreshToken: session.provider_refresh_token }
+          });
+        } catch (e) {
+          console.error('Failed to store token', e);
+        }
+      }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => handleSession(session));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>

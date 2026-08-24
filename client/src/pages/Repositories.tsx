@@ -38,18 +38,7 @@ export default function RepositoriesPage() {
     const handleSession = async (session: any) => {
       if (session) {
         setConnected(true);
-        // If we see a provider_token, capture it securely then discard it
-        if (session.provider_token) {
-          try {
-            await supabase.functions.invoke('store-github-token', {
-              body: { providerToken: session.provider_token, providerRefreshToken: session.provider_refresh_token }
-            });
-            // Force a refresh to strip the provider_token from memory if possible, 
-            // but just navigating/relying on our edge functions is fine.
-          } catch (e) {
-            console.error('Failed to store token', e);
-          }
-        }
+
         fetchGhRepos();
       } else {
         setConnected(false);
