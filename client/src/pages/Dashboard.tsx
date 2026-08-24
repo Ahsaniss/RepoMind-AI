@@ -1,7 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { demoRepositories, demoDashboardStats, demoAnalysis } from '../data/demoRepository';
+import { supabase } from '../supabase';
 
-const connectGitHub = () => { window.location.href = '/api/github/auth'; };
+const connectGitHub = () => {
+  supabase.auth.signInWithOAuth({
+    provider: 'github',
+    options: {
+      scopes: 'repo',
+      redirectTo: 'https://repo-mind-ai-git-main-ahsaniss-projects.vercel.app'
+    }
+  });
+};
 
 const STAT_CARDS = [
   { id: 'repos',    label: 'Repositories',    value: 3,    icon: '◫', color: '#8B5CF6', change: '+2 this month' },

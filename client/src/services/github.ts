@@ -1,5 +1,6 @@
 import { api } from './api';
 import type { Repository, GitHubUser } from '../types';
+import { supabase } from '../supabase';
 
 export const githubService = {
   /** Get the authenticated user's profile */
@@ -10,9 +11,15 @@ export const githubService = {
 
   /** Start the GitHub OAuth flow */
   login: () => {
-    window.location.href = '/api/github/auth';
+    supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        scopes: 'repo',
+        redirectTo: 'https://repo-mind-ai-git-main-ahsaniss-projects.vercel.app'
+      }
+    });
   },
 
   /** Log out the current user */
-  logout: () => api.post<void>('/github/logout'),
+  logout: () => supabase.auth.signOut(),
 };
