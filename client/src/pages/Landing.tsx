@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
   GitBranch, 
@@ -14,8 +14,21 @@ import {
   ChevronRight,
   Send
 } from 'lucide-react';
+import { supabase } from '../supabase';
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+
+  const connectGitHub = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        scopes: 'repo read:user',
+        redirectTo: `${window.location.origin}/repositories`,
+      },
+    });
+  };
+
   return (
     <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text-primary)] font-sans overflow-x-hidden selection:bg-accent-violet/30">
       
@@ -58,11 +71,17 @@ export default function LandingPage() {
 
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-          <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white text-black px-6 py-3 rounded-md font-medium hover:bg-zinc-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+          <button
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white text-black px-6 py-3 rounded-md font-medium hover:bg-zinc-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+            onClick={connectGitHub}
+          >
             <GitBranch size={18} />
             Connect GitHub
           </button>
-          <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[var(--color-background-secondary)] text-white border border-subtle px-6 py-3 rounded-md font-medium hover:bg-[var(--color-card)] transition-colors">
+          <button
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[var(--color-background-secondary)] text-white border border-subtle px-6 py-3 rounded-md font-medium hover:bg-[var(--color-card)] transition-colors"
+            onClick={() => navigate('/repositories')}
+          >
             Try Demo Repository
             <ChevronRight size={16} className="text-[var(--color-text-secondary)]" />
           </button>
