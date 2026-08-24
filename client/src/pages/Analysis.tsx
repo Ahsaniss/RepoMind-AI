@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { demoAnalysis } from '../data/demoRepository';
+import { supabase } from '../supabase';
 
 const METRICS = [
   { key: 'codeQuality',    label: 'Code Quality',    color: '#8B5CF6' },
@@ -10,7 +13,93 @@ const METRICS = [
 ];
 
 export default function AnalysisPage() {
-  const { metrics, issues, score, summary } = demoAnalysis;
+  const { id } = useParams();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    let subscription: any;
+
+    const fetchOrStartAnalysis = async () => {
+      setLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Not authenticated');
+
+        // Check if an analysis already exists
+        const { data: existing, error: fetchErr } = await supabase
+          .from('repository_analyses')
+          .select('*')
+          .eq('repository_id', id)
+          .eq('user_id', session.user.id)
+          .limit(1)
+          .single();
+
+        if (existing && existing.status === 'completed') {
+          setData(existing.result);
+          setLoading(false);
+          return;
+        }
+
+        // If not, insert a new pending analysis request
+        if (!existing) {
+          await supabase.from('repository_analyses').insert({
+            user_id: session.user.id,
+            repository_id: id,
+            status: 'pending',
+          });
+        }
+
+        // Subscribe to changes
+        subscription = supabase
+          .channel(`analysis-${id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'repository_analyses',
+              filter: `repository_id=eq.${id}`,
+            },
+            (payload) => {
+              const row = payload.new;
+              if (row.status === 'completed') {
+                setData(row.result);
+                setLoading(false);
+              } else if (row.status === 'failed') {
+                setError(row.error_message || 'Analysis failed');
+                setLoading(false);
+              }
+            }
+          )
+          .subscribe();
+      } catch (err: any) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchOrStartAnalysis();
+
+    return () => {
+      if (subscription) supabase.removeChannel(subscription);
+    };
+  }, [id]);
+
+  if (loading) {
+    return <div className="page-container"><p>⏳ Analyzing repository... this might take a minute.</p></div>;
+  }
+
+  if (error) {
+    return <div className="page-container"><p style={{color: 'red'}}>⚠️ {error}</p></div>;
+  }
+
+  // Fallback to demo data if we couldn't load real data but didn't error (e.g. during initial setup)
+  const analysisResult = data || demoAnalysis;
+  const { metrics, issues, score, summary } = analysisResult;
+
   return (
     <div className="page-container">
       <div className="page-header">

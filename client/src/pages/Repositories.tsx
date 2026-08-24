@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { demoRepositories } from '../data/demoRepository';
+import { supabase } from '../supabase';
 
 interface GitHubRepo {
   id: string;
@@ -32,17 +33,37 @@ export default function RepositoriesPage() {
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
 
-  // On mount: check if GitHub is already authenticated
+  // On mount: check auth state
   useEffect(() => {
-    fetch('/api/github/status')
-      .then(r => r.json())
-      .then((data: { authenticated: boolean }) => {
-        if (data.authenticated) {
-          setConnected(true);
-          fetchGhRepos();
+    const handleSession = async (session: any) => {
+      if (session) {
+        setConnected(true);
+        // If we see a provider_token, capture it securely then discard it
+        if (session.provider_token) {
+          try {
+            await supabase.functions.invoke('store-github-token', {
+              body: { providerToken: session.provider_token, providerRefreshToken: session.provider_refresh_token }
+            });
+            // Force a refresh to strip the provider_token from memory if possible, 
+            // but just navigating/relying on our edge functions is fine.
+          } catch (e) {
+            console.error('Failed to store token', e);
+          }
         }
-      })
-      .catch(() => {});
+        fetchGhRepos();
+      } else {
+        setConnected(false);
+        setGhRepos([]);
+      }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => handleSession(session));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Handle redirect from GitHub OAuth callback
@@ -69,9 +90,9 @@ export default function RepositoriesPage() {
   const fetchGhRepos = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/github/repos');
-      if (!res.ok) throw new Error('Failed to load repos');
-      const data: GitHubRepo[] = await res.json();
+      const res = await supabase.functions.invoke('github-repos');
+      if (res.error) throw res.error;
+      const data: GitHubRepo[] = res.data;
       setGhRepos(data);
     } catch (err) {
       setError('Could not load your GitHub repositories.');
@@ -80,14 +101,21 @@ export default function RepositoriesPage() {
     }
   };
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     setConnecting(true);
-    // Full-page redirect — the backend will redirect to GitHub
-    window.location.href = '/api/github/auth';
+    await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        scopes: 'repo read:user',
+        redirectTo: `${window.location.origin}/repositories`
+      }
+    });
   };
 
   const handleDisconnect = async () => {
-    await fetch('/api/github/logout', { method: 'POST' });
+    await supabase.functions.invoke('disconnect-github');
+    // Optionally also sign out of Supabase if the user shouldn't be logged in at all without github
+    // await supabase.auth.signOut(); 
     setConnected(false);
     setGhRepos([]);
   };

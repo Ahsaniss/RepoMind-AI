@@ -1,7 +1,8 @@
 /**
- * AI service — calls the Express backend, never Gemini directly.
+ * AI service — calls the Supabase Edge Function.
  * The browser never sees GEMINI_API_KEY.
  */
+import { supabase } from '../supabase';
 
 export interface AIMessage {
   id: string;
@@ -19,16 +20,13 @@ export interface AIChatPayload {
 }
 
 export async function postAIChat(payload: AIChatPayload): Promise<AIMessage> {
-  const res = await fetch('/api/ai/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+  const { data, error } = await supabase.functions.invoke('ai-chat', {
+    body: payload,
   });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error ?? 'AI request failed');
+  if (error) {
+    throw new Error(error.message ?? 'AI request failed');
   }
 
-  return res.json();
+  return data;
 }
